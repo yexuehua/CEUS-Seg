@@ -1,0 +1,8 @@
+.idea/
+__pycache__/
+Dataset/alldata/**
+Dataset/image/**
+Dataset/mask/**
+IpynbCodes
+*.png
+ModelCheckpoint/*

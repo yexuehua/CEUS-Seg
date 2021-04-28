@@ -12,8 +12,6 @@ now = datetime.datetime.now
 from sklearn.metrics import roc_curve, roc_auc_score, confusion_matrix
 from sklearn.model_selection import KFold
 
-
-
 # Directory with images and ground truths
 path_imgs = "./dataset/image"
 path_masks = "./dataset/mask"
@@ -90,15 +88,14 @@ for train_ix, test_ix in tqdm(kfold.split(CEUS_images)):
 
     # Compile and fit the  model
     model.compile(optimizer = Adam(lr = 0.0001), loss = dice_loss, metrics = [dsc])
-    if not os.path.exists('./model/KFold'+str(run)):
-        os.mkdir('./model/KFold'+str(run))
-        os.mkdir('./model/KFold' + str(run) + "/checkpoint")
-    model_checkpoint = ModelCheckpoint('./model/KFold'+str(run)+'/checkpoint/wights.{epoch:02d}.hdf5', monitor='val_loss', save_best_only=True)
+    if not os.path.exists('./ModelCheckpoint/KFold'+str(run)):
+        os.mkdir('./ModelCheckpoint/KFold'+str(run))
+        os.mkdir('./ModelCheckpoint/KFold' + str(run) + "/checkpoint")
+    model_checkpoint = ModelCheckpoint('./ModelCheckpoint/KFold'+str(run)+'/checkpoint/wights.{epoch:02d}.hdf5', monitor='val_loss', save_best_only=True)
     t = now()
     callbacks = [EarlyStopping(monitor='val_loss', patience = 20), model_checkpoint]
     history = model.fit(imgs_train, masks_train, validation_split=0.15, batch_size=batchnum,
                         epochs=epochnum, verbose=2, callbacks=callbacks)
-
 
     print('Training time: %s' % (now() - t))
 
