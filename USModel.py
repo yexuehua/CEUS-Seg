@@ -1,12 +1,13 @@
+import tensorflow as tf
+
 from keras.models import Model
 from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, Conv2DTranspose, multiply, Lambda, add, Activation
 from keras.layers import concatenate
 from keras.optimizers import *
 import keras.backend as K
 from keras.callbacks import ModelCheckpoint, EarlyStopping
-from keras.preprocessing import image
 
-import tensorflow as tf
+import numpy as np
 
 
 # Define loss and performance metrics
@@ -53,7 +54,7 @@ def ConvBlock(in_fmaps, num_fmaps):
     return conv_out
 
 # Build the model
-def Network(input_size):
+def Network(input_size, pretrained_weights=None):
 
     input = Input(shape=input_size)
 
@@ -86,5 +87,8 @@ def Network(input_size):
     conv10 = Conv2D(1, (1, 1), activation='sigmoid')(conv9)
 
     model = Model(inputs = input, outputs = conv10)
+    model.compile(optimizer = Adam(lr = 0.0001), loss = dice_loss, metrics = [dsc])
+    if(pretrained_weights):
+    	model.load_weights(pretrained_weights)
 
     return model
