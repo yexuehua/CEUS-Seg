@@ -17,9 +17,11 @@ now = datetime.datetime.now
 
 # Directory with images and ground truths
 path_imgs = "./Dataset/image"
+path_salient = "./Dataset/salient"
 path_masks = "./Dataset/mask"
 
 test_path_imgs = "./Dataset/test/image"
+test_path_salient = "./Dataset/test/salient"
 test_path_masks = "./Dataset/test/mask"
 
 # Introduce parameters
@@ -27,23 +29,28 @@ img_row = 768
 img_col = 512
 img_chan = 3
 epochnum = 200
-batchnum = 8
+batchnum = 4
 input_size = (img_row, img_col, img_chan)
 
 imagesList = listdir(path_imgs)
+salientList = [i+".jpg" for i in imagesList]
 masksList = [i+"_Merge.nii" for i in imagesList]
 print("Number of images:", len(imagesList))
 
 test_imagesList = listdir(test_path_imgs)
+test_salientList = [i+".jpg" for i in test_imagesList]
 test_masksList = [i+"_Merge.nii" for i in test_imagesList]
 
 CEUS_images, US_images = img_load(path_imgs, imagesList)
+CEUS_salient = load_jpg(path_salient, salientList)
 CEUS_masks, US_masks = img_load(path_masks, masksList)
 
 test_CEUS_images, test_US_images = img_load(test_path_imgs, test_imagesList)
+test_CEUS_salient = load_jpg(test_path_salient, test_salientList)
 test_CEUS_masks, test_US_masks = img_load(test_path_masks, test_masksList)
 
 print("Images shape: (1)CEUS_image ", CEUS_images.shape, "(2)US_image ", US_images.shape)
+print("mask shape: (1)CEUS_mask ", CEUS_salient.shape)
 print("mask shape: (1)CEUS_mask ", CEUS_masks.shape, "(2)US_mask ", US_masks.shape)
 
 # Plot the first and last images
@@ -84,21 +91,21 @@ for k in range(n_folds):
     print('Run #', run+1)
 
     # Define  the model
-    model = Network(input_size)
+    model = UNet_SA(input_size)
 
     print(kfold_train_idx[k], "\n", kfold_valid_idx[k])
 
     # Split into train and valid sets
-    imgs_train, masks_train, imgs_valid, masks_valid = CEUS_images[kfold_train_idx[k]], CEUS_masks[kfold_train_idx[k]], \
-                                                     CEUS_images[kfold_valid_idx[k]],CEUS_masks[kfold_valid_idx[k]]
+    imgs_train, salient_train, masks_train, imgs_valid, salient_valid, masks_valid = CEUS_images[kfold_train_idx[k]], CEUS_salient[kfold_train_idx[k]], CEUS_masks[kfold_train_idx[k]], \
+                                                                                     CEUS_images[kfold_valid_idx[k]],CEUS_salient[kfold_valid_idx[k]], CEUS_masks[kfold_valid_idx[k]]
 
-    # data augmentation
-    TrainGene = ImageAugmentGenerator(imgs_train, masks_train, batchnum)
-    # for showimg,showmask in TrainGene:
-    #     showimg,showmask = next(TrainGene)
-    #     for i in range(batchnum):
-    #         display_img_mask(showimg,showmask,showmask,i)
-    ValidGene = ValImageGenerator(imgs_valid, masks_valid, batchnum)
+    # # data augmentation
+    # TrainGene = ImageAugmentGenerator(imgs_train, masks_train, batchnum)
+    # # for showimg,showmask in TrainGene:
+    # #     showimg,showmask = next(TrainGene)
+    # #     for i in range(batchnum):
+    # #         display_img_mask(showimg,showmask,showmask,i)
+    # ValidGene = ValImageGenerator(imgs_valid, masks_valid, batchnum)
 
     ## show augemented data
     # showimg,showmask = next(TrainGene)
@@ -107,17 +114,17 @@ for k in range(n_folds):
     # display_img_mask(showvalimg,showvalmask,showvalmask,1)
 
     # Compile and fit the  model
-    model.compile(optimizer = Adam(lr = 0.0001), loss = dice_loss, metrics = [dsc])
+    model.compile(optimizer = Adam(lr = 0.00001), loss = dice_loss, metrics = [dsc])
     if not os.path.exists('./ModelCheckpoint/KFold'+str(run)):
         os.mkdir('./ModelCheckpoint/KFold'+str(run))
         os.mkdir('./ModelCheckpoint/KFold' + str(run) + "/checkpoint")
     model_checkpoint = ModelCheckpoint('./ModelCheckpoint/KFold'+str(run)+'/checkpoint/wights.{epoch:02d}.hdf5', monitor='val_loss', save_best_only=True)
     t = now()
     callbacks = [model_checkpoint]#EarlyStopping(monitor='val_loss', patience = 20),
-    #history = model.fit(imgs_train, masks_train, validation_data=(imgs_valid, masks_valid), batch_size=batchnum,epochs=epochnum, verbose=2, callbacks=callbacks)
+    history = model.fit([imgs_train, salient_train], masks_train, validation_data=([imgs_valid, salient_valid], masks_valid), batch_size=batchnum,epochs=epochnum, verbose=2, callbacks=callbacks)
 
     # this kind of fit model is code for data augmentation
-    history = model.fit_generator(TrainGene, steps_per_epoch=np.ceil(len(kfold_train_idx[k])/batchnum), epochs=epochnum, validation_data=ValidGene, validation_steps=np.ceil(len(kfold_valid_idx[k])/batchnum), callbacks=callbacks)
+    #history = model.fit_generator(TrainGene, steps_per_epoch=np.ceil(len(kfold_train_idx[k])/batchnum), epochs=epochnum, validation_data=ValidGene, validation_steps=np.ceil(len(kfold_valid_idx[k])/batchnum), callbacks=callbacks)
     print('Training time: %s' % (now() - t))
 
     # Plot the loss and accuracy
@@ -150,7 +157,7 @@ for k in range(n_folds):
 
     # Make predictions
     t = now()
-    preds = model.predict(test_CEUS_images)
+    preds = model.predict([test_CEUS_images, test_CEUS_salient])
     print('Testing time: %s' % (now() - t))
 
     # Evaluate model

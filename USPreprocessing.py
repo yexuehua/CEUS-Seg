@@ -1,5 +1,6 @@
 import os
 import matplotlib.pyplot as plt
+import cv2
 import numpy as np
 import SimpleITK as sitk
 
@@ -47,12 +48,23 @@ def img_load(dir_path, imgs_list):
     # imgs_array = np.expand_dims(imgs_array, axis=3)
     return CEUS_data, US_data
 
+def load_jpg(dir_path, imgs_list):
+    CEUS_data_list = []
+    for i in range(len(imgs_list)):
+        img = cv2.imread(os.path.join(dir_path, imgs_list[i]), cv2.IMREAD_GRAYSCALE)
+        img = img/255
+        img = np.expand_dims(img, axis=2)
+        CEUS_data_list.append(img)
+    CEUS_data = np.array(CEUS_data_list)
+    return CEUS_data
+
 def ImageAugmentGenerator(image, mask, batchnum):
     dataGene = ImageDataGenerator(
         rotation_range = 180,
-        width_shift_range= 0.1,
-        height_shift_range= 0.1,
-        zoom_range= 0.1)
+        width_shift_range= 0.15,
+        height_shift_range= 0.15,
+        shear_range= 0.15,
+        zoom_range= 0.15)
 
     img_generator = dataGene.flow(image, batch_size= batchnum, seed=1)
     mask_generator = dataGene.flow(mask,batch_size= batchnum, seed=1)
@@ -65,6 +77,28 @@ def ValImageGenerator(image, mask, batchnum):
     mask_generator = dataGene.flow(mask,batch_size= batchnum)
     for img,mask in zip(img_generator, mask_generator):
         yield (img,mask)
+
+def UNetSA_ImageAugmentGenerator(images, salients, masks, batchnum):
+    dataGene = ImageDataGenerator(
+        rotation_range = 180,
+        width_shift_range= 0.15,
+        height_shift_range= 0.15,
+        shear_range= 0.15,
+        zoom_range= 0.15)
+
+    img_generator = dataGene.flow(images, batch_size= batchnum, seed=1)
+    salient_generator = dataGene.flow(salients, batch_size= batchnum, seed=1)
+    mask_generator = dataGene.flow(masks,batch_size= batchnum, seed=1)
+    for img, salient, mask in zip(img_generator, salient_generator, mask_generator):
+        yield (img, salient, mask)
+
+def UNetSA_ValImageGenerator(images, salients, masks, batchnum):
+    dataGene = ImageDataGenerator()
+    img_generator = dataGene.flow(images, batch_size= batchnum)
+    salient_generator = dataGene.flow(salients, batch_size= batchnum)
+    mask_generator = dataGene.flow(masks,batch_size= batchnum)
+    for img, salient, mask in zip(img_generator, salient_generator, mask_generator):
+        yield (img, salient, mask)
 
 def display_1st_last(CEUS_images, CEUS_masks, US_images, US_masks):
     # Plot the first and last images

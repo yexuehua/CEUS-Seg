@@ -1,6 +1,7 @@
 from USPreprocessing import *
 from USModel import *
 import os
+import cv2
 import pandas as pd
 
 # Introduce parameters
@@ -11,6 +12,29 @@ epochnum = 200
 batchnum = 4
 input_size = (img_row, img_col, img_chan)
 
+def create_saliant_map():
+    path_imgs = "./dataset/test/image"
+
+    imagesList = os.listdir(path_imgs)
+    CEUS_images, US_images = img_load(path_imgs, imagesList)
+    model = Network(input_size, "./ModelCheckpoint/unet-withoutaug/KFold3/checkpoint/wights.198.hdf5")
+    preds = model.predict(CEUS_images[:len(imagesList)//2])
+    preds_part2 = model.predict(CEUS_images[len(imagesList)//2:])
+
+    preds = preds*255
+    preds_part2 = preds_part2*255
+
+    for i in range(len(preds)):
+        display_img_mask(CEUS_images, CEUS_images, preds, i)
+
+    for idx, pred_img in enumerate(preds):
+        cv2.imwrite("./Dataset/test/salient/" + imagesList[idx]+".jpg", pred_img[:,:,0])
+    idx2 = idx
+    for pred_img in preds_part2:
+        idx2 += 1
+        cv2.imwrite("./Dataset/test/salient/" + imagesList[idx2]+".jpg", pred_img[:,:,0])
+create_saliant_map()
+"""
 # Directory with images and ground truths
 path_imgs = "./dataset/image"
 path_masks = "./dataset/mask"
@@ -34,5 +58,5 @@ preds = model.predict(test_images)
 
 for i in range(len(test_masks)):
     display_img_mask(test_images, test_masks, preds, i)
-
+"""
 
