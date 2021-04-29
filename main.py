@@ -93,7 +93,17 @@ for k in range(n_folds):
                                                      CEUS_images[kfold_valid_idx[k]],CEUS_masks[kfold_valid_idx[k]]
 
     TrainGene = ImageAugmentGenerator(imgs_train, masks_train, batchnum)
+    for showimg,showmask in TrainGene:
+        showimg,showmask = next(TrainGene)
+        for i in range(batchnum):
+            display_img_mask(showimg,showmask,showmask,i)
     ValidGene = ValImageGenerator(imgs_valid, masks_valid, batchnum)
+
+    # showimg,showmask = next(TrainGene)
+    # showvalimg,showvalmask = next(ValidGene)
+    # display_img_mask(showimg,showmask,showmask,1)
+    # display_img_mask(showvalimg,showvalmask,showvalmask,1)
+
     # Compile and fit the  model
     model.compile(optimizer = Adam(lr = 0.0001), loss = dice_loss, metrics = [dsc])
     if not os.path.exists('./ModelCheckpoint/KFold'+str(run)):

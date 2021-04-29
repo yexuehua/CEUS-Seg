@@ -49,16 +49,22 @@ def img_load(dir_path, imgs_list):
 
 def ImageAugmentGenerator(image, mask, batchnum):
     dataGene = ImageDataGenerator(
-        rotation_range = 90,
-        width_shift_range= 0.2,
-        height_shift_range= 0.2,
-        zoom_range= 0.3)
+        rotation_range = 180,
+        width_shift_range= 0.1,
+        height_shift_range= 0.1,
+        zoom_range= 0.1)
 
-    return dataGene.flow(image, mask, batch_size=batchnum)
+    img_generator = dataGene.flow(image, batch_size= batchnum, seed=1)
+    mask_generator = dataGene.flow(mask,batch_size= batchnum, seed=1)
+    for img,mask in zip(img_generator, mask_generator):
+        yield (img,mask)
 
 def ValImageGenerator(image, mask, batchnum):
     dataGene = ImageDataGenerator()
-    return dataGene.flow(image, mask, batch_size= batchnum)
+    img_generator = dataGene.flow(image, batch_size= batchnum)
+    mask_generator = dataGene.flow(mask,batch_size= batchnum)
+    for img,mask in zip(img_generator, mask_generator):
+        yield (img,mask)
 
 def display_1st_last(CEUS_images, CEUS_masks, US_images, US_masks):
     # Plot the first and last images
